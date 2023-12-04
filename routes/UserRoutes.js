@@ -1,7 +1,6 @@
 const express = require('express');
 const UserController = require('../controllers/UserController');
-const verify = require('../tokenVerif');
-
+const verify = require('../Interceptor/tokenVerif');
 const router = express.Router();
 
 //update

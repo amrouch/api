@@ -1,6 +1,6 @@
 const express = require('express');
 const CategoryController = require('../controllers/CategoryController');
-const verify = require('../tokenVerif');
+const verify = require('../Interceptor/tokenVerif');
 
 const router = express.Router();
 

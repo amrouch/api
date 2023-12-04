@@ -5,6 +5,7 @@ const ProductRoutes = require('./routes/ProductRoutes');
 const categoryRoute = require('./routes/CategoryRoutes');
 const userRoute = require('./routes/UserRoutes');
 const authRoute = require('./routes/AuthRoutes');
+const orderRoute = require('./routes/OrderRoutes');
 const cookieParser = require('cookie-parser');
 
 const app = express();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoute)
 app.use("/api/users", userRoute)
 app.use("/api/category", categoryRoute)
 app.use("/api/products", ProductRoutes)
+app.use("/api/orders", orderRoute)
 
 app.listen(process.env.port || 3000, function () {
     console.log('now listening for requests')
