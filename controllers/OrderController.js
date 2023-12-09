@@ -138,6 +138,25 @@ const getOrders = async (req, res, next) => {
     }
 }
 
+const getByClient = async (req, res, next) => {
+    const user = req.params.id;
+    try {
+        const orders = await Order.find({ user: user })
+            .populate('products.product', 'name price');
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({ error: `No orders found for client ${user}` });
+        }
+
+        res.json(orders);
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal server error' });
+        next(err);
+    }
+}
+
 const deleteOrder = async (req, res, next) => {
     try {
         const OrderId = req.params.id;
@@ -158,5 +177,6 @@ module.exports = {
     updateOrder,
     getOrder,
     getOrders,
+    getByClient,
     deleteOrder
 }

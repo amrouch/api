@@ -1,8 +1,19 @@
 const User = require("../models/UserModel");
-const Reset = require("../models/ResetModel");
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.MAIL,
+        pass: process.env.MAILPASS,
+    },
+});
 
 const register = async (req, res, next) => {
     try {
@@ -55,50 +66,65 @@ const login = async (req, res, next) => {
 }
 
 const forgotPass = async (req, res) => {
+    const { email } = req.body;
+
     try {
-        const { email } = req.body;
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).send('User not found');
         }
 
-        const token = crypto.randomBytes(32).toString('hex');
+        const resetToken = crypto.randomBytes(20).toString('hex');
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 1);
-        const resetPassword = new Reset({
-            user: user._id,
-            token,
-            expiresAt,
-        });
-        await resetPassword.save();
-        res.json({ message: 'Reset password token sent successfully' });
+
+        user.resetToken = resetToken;
+        user.resetTokenExpiration = expiresAt;
+        await user.save();
+
+        const mailOptions = {
+            from: process.env.MAIL,
+            to: user.email,
+            subject: 'Password Reset',
+            text: `your token to reset password is:" ${resetToken} "`,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.send('Password reset email sent');
     }
     catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        res.status(500).send('Internal Server Error');
     }
 }
 
 const resetPass = async (req, res) => {
-    try {
-        const { token, newPassword } = req.body;
-        const hashedPwd = await bcrypt.hash(newPassword, 10);
-        const resetPassword = await Reset.findOne({ token });
+    const { token } = req.body;
+    const { newPassword } = req.body;
+    const hashedPwd = await bcrypt.hash(newPassword, 10);
 
-        if (!resetPassword || resetPassword.expires < new Date()) {
-            return res.status(400).json({ message: 'Invalid or expired token' });
+    try {
+        const user = await User.findOne({
+            resetToken: token,
+            resetTokenExpiration: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            return res.status(401).send('Invalid or expired token');
         }
 
-        const user = await User.findById(resetPassword.user);
         user.password = hashedPwd;
+        user.resetToken = undefined;
+        user.resetTokenExpiration = undefined;
         await user.save();
-        await Reset.findByIdAndDelete(resetPassword._id);
-        res.json({ message: 'Password reset successfully' });
+
+        res.send('Password reset successful');
     }
     catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        res.status(500).send('Internal Server Error');
     }
 }
 
